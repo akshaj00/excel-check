@@ -40,6 +40,7 @@ export function FileUploadCard({
     (files: FileList | null) => {
       if (!files || files.length === 0) return;
       const candidate = files[0];
+      if (!candidate) return;
       if (!isValidExcelFile(candidate)) {
         onInvalidFile();
         return;
