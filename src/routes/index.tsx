@@ -6,10 +6,16 @@ import { Button } from "@/components/ui/button";
 import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
 import { FileUploadCard } from "@/components/FileUploadCard";
 import { ComparisonResults } from "@/components/ComparisonResults";
+import { DetectedReports } from "@/components/DetectedReports";
 import {
-  compareFiles,
-  type ComparisonResponse,
-} from "@/lib/comparison";
+  ProcessingStatus,
+  type StatusStep,
+} from "@/components/ProcessingStatus";
+import {
+  runVerification,
+  VerificationError,
+  type VerificationOutcome,
+} from "@/lib/verification";
 
 export const Route = createFileRoute("/")({
   head: () => ({
@@ -18,13 +24,13 @@ export const Route = createFileRoute("/")({
       {
         name: "description",
         content:
-          "Upload a main Excel file and a project Excel file to cross-verify project data against the main project database.",
+          "Upload a main Excel file and a project daily report to cross-verify project data directly in your browser.",
       },
       { property: "og:title", content: "Excel Cross Verification Tool" },
       {
         property: "og:description",
         content:
-          "Cross-check project data against the main project database by uploading two Excel files.",
+          "Cross-check daily project reports against the main project database — entirely in the browser.",
       },
       { property: "og:type", content: "website" },
       { name: "twitter:card", content: "summary" },
@@ -37,7 +43,7 @@ function Index() {
   const [mainFile, setMainFile] = useState<File | null>(null);
   const [projectFile, setProjectFile] = useState<File | null>(null);
   const [isVerifying, setIsVerifying] = useState(false);
-  const [result, setResult] = useState<ComparisonResponse | null>(null);
+  const [outcome, setOutcome] = useState<VerificationOutcome | null>(null);
   const [error, setError] = useState<string | null>(null);
 
   const bothFilesSelected = mainFile !== null && projectFile !== null;
@@ -47,19 +53,28 @@ function Index() {
   };
 
   const handleVerify = async () => {
-    if (!mainFile || !projectFile) {
-      setError("Please select both files before starting the verification.");
+    if (!mainFile && !projectFile) {
+      setError("Please upload the Main Excel file and the Project Report Excel file.");
       return;
     }
+    if (!mainFile) {
+      setError("Please upload the Main Excel file.");
+      return;
+    }
+    if (!projectFile) {
+      setError("Please upload the Project Report Excel file.");
+      return;
+    }
+
     setError(null);
-    setResult(null);
+    setOutcome(null);
     setIsVerifying(true);
     try {
-      const response = await compareFiles(mainFile, projectFile);
-      setResult(response);
+      const result = await runVerification(mainFile, projectFile);
+      setOutcome(result);
     } catch (err) {
       setError(
-        err instanceof Error
+        err instanceof VerificationError || err instanceof Error
           ? err.message
           : "Unable to process the files. Please try again.",
       );
@@ -71,10 +86,45 @@ function Index() {
   const handleReset = () => {
     setMainFile(null);
     setProjectFile(null);
-    setResult(null);
+    setOutcome(null);
     setError(null);
     setIsVerifying(false);
   };
+
+  const steps: StatusStep[] = [
+    {
+      label: "Main Excel uploaded",
+      detail: mainFile?.name,
+      state: mainFile ? "done" : "pending",
+    },
+    {
+      label: "Project Report uploaded",
+      detail: projectFile?.name,
+      state: projectFile ? "done" : "pending",
+    },
+    {
+      label: "Project identified",
+      detail: outcome?.project,
+      state: outcome ? "done" : isVerifying ? "active" : "pending",
+    },
+    {
+      label: outcome
+        ? `${outcome.detectedReports.length} report dates detected`
+        : "Report dates detected",
+      state: outcome ? "done" : isVerifying ? "active" : "pending",
+    },
+    {
+      label: "Main Excel records filtered",
+      detail: outcome
+        ? `${outcome.projectRowCount} of ${outcome.mainRowCount} records`
+        : undefined,
+      state: outcome ? "done" : isVerifying ? "active" : "pending",
+    },
+    {
+      label: "Ready for comparison",
+      state: outcome ? "done" : "pending",
+    },
+  ];
 
   return (
     <div className="min-h-screen bg-muted/30">
@@ -88,7 +138,7 @@ function Index() {
               Excel Cross Verification
             </h1>
             <p className="text-sm text-muted-foreground">
-              Compare project data against the main project database
+              Compare daily project reports against the main project database
             </p>
           </div>
         </div>
@@ -108,8 +158,8 @@ function Index() {
         />
 
         <FileUploadCard
-          title="Project Excel File"
-          description="Upload the Excel file containing data for the project to be verified."
+          title="Project Daily Report"
+          description="Upload the project's daily report workbook. The project and dates are detected automatically."
           file={projectFile}
           onFileChange={(file) => {
             setProjectFile(file);
@@ -118,6 +168,8 @@ function Index() {
           onInvalidFile={handleInvalidFile}
           disabled={isVerifying}
         />
+
+        <ProcessingStatus steps={steps} />
 
         {error && (
           <Alert variant="destructive">
@@ -157,7 +209,7 @@ function Index() {
             )}
           </Button>
 
-          {result && !isVerifying && (
+          {outcome && !isVerifying && (
             <Button variant="outline" onClick={handleReset}>
               <RotateCcw className="mr-2 h-4 w-4" />
               New Verification
@@ -165,7 +217,15 @@ function Index() {
           )}
         </div>
 
-        {result && !isVerifying && <ComparisonResults data={result} />}
+        {outcome && !isVerifying && (
+          <>
+            <DetectedReports
+              project={outcome.project}
+              reports={outcome.detectedReports}
+            />
+            <ComparisonResults data={outcome.comparison} />
+          </>
+        )}
       </main>
     </div>
   );
