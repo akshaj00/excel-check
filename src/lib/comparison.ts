@@ -1,17 +1,33 @@
 /**
- * Backend API integration for Excel cross-verification.
+ * Comparison engine (client-side).
  *
- * This module is intentionally isolated: when the backend endpoint or
- * response shape changes, only this file needs to be updated.
+ * The actual counting/comparison RULES are intentionally not implemented
+ * yet. They live in `src/lib/rules.ts` as a list of rule functions, so new
+ * rules can be added later without touching any UI component.
  */
+
+import type { Row, DailyReport } from "@/lib/excel";
+import { COMPARISON_RULES } from "@/lib/rules";
 
 export type ResultStatus = "matched" | "changed" | "missing" | (string & {});
 
 export interface ComparisonResultRow {
+  date: string;
   field: string;
-  main_value: string | number | null;
-  project_value: string | number | null;
+  mainValue: string | number | null;
+  reportValue: string | number | null;
+  difference?: number | null;
   status: ResultStatus;
+  note?: string;
+}
+
+export interface DateComparison {
+  date: string;
+  sheet: string;
+  mainRecordCount: number;
+  /** Set when the date has no matching Main Excel records. */
+  error?: string;
+  results: ComparisonResultRow[];
 }
 
 export interface ComparisonSummary {
@@ -22,56 +38,71 @@ export interface ComparisonSummary {
 }
 
 export interface ComparisonResponse {
+  project: string;
   summary: ComparisonSummary;
-  results: ComparisonResultRow[];
+  dates: DateComparison[];
 }
 
-const API_ENDPOINT: string =
-  import.meta.env["VITE_COMPARE_API_URL"] ?? "/api/compare";
+/** Input given to every comparison rule for a single reporting date. */
+export interface RuleContext {
+  project: string;
+  date: string;
+  /** Main Excel rows for this project + date. */
+  mainRows: Row[];
+  /** The daily report sheet for this date. */
+  report: DailyReport;
+}
+
+export type ComparisonRule = (context: RuleContext) => ComparisonResultRow[];
+
+export interface DateBucket {
+  report: DailyReport;
+  mainRows: Row[];
+}
 
 /**
- * Sends both Excel files to the backend in a single multipart request.
- *
- * Expected backend contract (subject to change when the backend is built):
- *   POST {API_ENDPOINT} with form fields `main_file` and `project_file`
- *   -> returns ComparisonResponse JSON
+ * Runs every registered rule for every detected date.
+ * Rules that throw are ignored so one bad rule cannot crash the app.
  */
-export async function compareFiles(
-  mainFile: File,
-  projectFile: File,
-): Promise<ComparisonResponse> {
-  const formData = new FormData();
-  formData.append("main_file", mainFile);
-  formData.append("project_file", projectFile);
+export function analyzeProjectData(
+  project: string,
+  buckets: DateBucket[],
+): ComparisonResponse {
+  const dates: DateComparison[] = buckets.map(({ report, mainRows }) => {
+    const results: ComparisonResultRow[] = [];
 
-  let response: Response;
-  try {
-    response = await fetch(API_ENDPOINT, {
-      method: "POST",
-      body: formData,
-    });
-  } catch {
-    throw new Error(
-      "Unable to reach the server. Please check your connection and try again.",
-    );
-  }
+    if (mainRows.length > 0) {
+      for (const rule of COMPARISON_RULES) {
+        try {
+          results.push(
+            ...rule({ project, date: report.date, mainRows, report }),
+          );
+        } catch {
+          // A failing rule must not break the whole verification.
+        }
+      }
+    }
 
-  if (!response.ok) {
-    throw new Error(
-      "Unable to process the files. Please try again.",
-    );
-  }
+    return {
+      date: report.date,
+      sheet: report.sheet,
+      mainRecordCount: mainRows.length,
+      ...(mainRows.length === 0
+        ? {
+            error: `${report.date} was not found for this project in the Main Excel file.`,
+          }
+        : {}),
+      results,
+    };
+  });
 
-  let data: ComparisonResponse;
-  try {
-    data = (await response.json()) as ComparisonResponse;
-  } catch {
-    throw new Error("The server returned an unexpected response.");
-  }
+  const all = dates.flatMap((d) => d.results);
+  const summary: ComparisonSummary = {
+    total: all.length,
+    matched: all.filter((r) => r.status === "matched").length,
+    changed: all.filter((r) => r.status === "changed").length,
+    missing: all.filter((r) => r.status === "missing").length,
+  };
 
-  if (!data || !data.summary || !Array.isArray(data.results)) {
-    throw new Error("The server returned an unexpected response.");
-  }
-
-  return data;
+  return { project, summary, dates };
 }
