@@ -27,7 +27,7 @@ export interface ComparisonResponse {
 }
 
 const API_ENDPOINT: string =
-  import.meta.env.VITE_COMPARE_API_URL ?? "/api/compare";
+  import.meta.env["VITE_COMPARE_API_URL"] ?? "/api/compare";
 
 /**
  * Sends both Excel files to the backend in a single multipart request.
