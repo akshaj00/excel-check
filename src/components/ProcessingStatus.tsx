@@ -3,7 +3,7 @@ import { CheckCircle2, Circle, Loader2 } from "lucide-react";
 
 export interface StatusStep {
   label: string;
-  detail?: string;
+  detail?: string | undefined;
   state: "done" | "pending" | "active";
 }
 
