@@ -1,24 +1,172 @@
 import { createFileRoute } from "@tanstack/react-router";
+import { useState } from "react";
+import { AlertCircle, FileSpreadsheet, Loader2, RotateCcw } from "lucide-react";
 
-// No head() here: the home route inherits title/description/og/twitter from
-// __root.tsx, and ships no og:image so serve-time hosting can inject the
-// project's social preview (explicit og:image or latest screenshot).
+import { Button } from "@/components/ui/button";
+import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
+import { FileUploadCard } from "@/components/FileUploadCard";
+import { ComparisonResults } from "@/components/ComparisonResults";
+import {
+  compareFiles,
+  type ComparisonResponse,
+} from "@/lib/comparison";
+
 export const Route = createFileRoute("/")({
+  head: () => ({
+    meta: [
+      { title: "Excel Cross Verification Tool" },
+      {
+        name: "description",
+        content:
+          "Upload a main Excel file and a project Excel file to cross-verify project data against the main project database.",
+      },
+      { property: "og:title", content: "Excel Cross Verification Tool" },
+      {
+        property: "og:description",
+        content:
+          "Cross-check project data against the main project database by uploading two Excel files.",
+      },
+      { property: "og:type", content: "website" },
+      { name: "twitter:card", content: "summary" },
+    ],
+  }),
   component: Index,
 });
 
-// IMPORTANT: Replace this placeholder. See ./README.md for routing conventions.
 function Index() {
+  const [mainFile, setMainFile] = useState<File | null>(null);
+  const [projectFile, setProjectFile] = useState<File | null>(null);
+  const [isVerifying, setIsVerifying] = useState(false);
+  const [result, setResult] = useState<ComparisonResponse | null>(null);
+  const [error, setError] = useState<string | null>(null);
+
+  const bothFilesSelected = mainFile !== null && projectFile !== null;
+
+  const handleInvalidFile = () => {
+    setError("Invalid file type. Please upload a .xlsx or .xls Excel file.");
+  };
+
+  const handleVerify = async () => {
+    if (!mainFile || !projectFile) {
+      setError("Please select both files before starting the verification.");
+      return;
+    }
+    setError(null);
+    setResult(null);
+    setIsVerifying(true);
+    try {
+      const response = await compareFiles(mainFile, projectFile);
+      setResult(response);
+    } catch (err) {
+      setError(
+        err instanceof Error
+          ? err.message
+          : "Unable to process the files. Please try again.",
+      );
+    } finally {
+      setIsVerifying(false);
+    }
+  };
+
+  const handleReset = () => {
+    setMainFile(null);
+    setProjectFile(null);
+    setResult(null);
+    setError(null);
+    setIsVerifying(false);
+  };
+
   return (
-    <div
-      className="flex min-h-screen items-center justify-center"
-      style={{ backgroundColor: "#fcfbf8" }}
-    >
-      <img
-        data-lovable-blank-page-placeholder="REMOVE_THIS"
-        src="https://cdn.gpteng.co/blank-app-v1.svg"
-        alt="Your app will live here!"
-      />
+    <div className="min-h-screen bg-muted/30">
+      <header className="border-b border-border bg-background">
+        <div className="mx-auto flex max-w-3xl items-center gap-3 px-4 py-6">
+          <div className="flex h-10 w-10 items-center justify-center rounded-md bg-primary/10">
+            <FileSpreadsheet className="h-5 w-5 text-primary" />
+          </div>
+          <div>
+            <h1 className="text-xl font-semibold tracking-tight text-foreground">
+              Excel Cross Verification
+            </h1>
+            <p className="text-sm text-muted-foreground">
+              Compare project data against the main project database
+            </p>
+          </div>
+        </div>
+      </header>
+
+      <main className="mx-auto max-w-3xl space-y-6 px-4 py-8">
+        <FileUploadCard
+          title="Main Excel File"
+          description="Upload the Excel file containing data for all projects."
+          file={mainFile}
+          onFileChange={(file) => {
+            setMainFile(file);
+            setError(null);
+          }}
+          onInvalidFile={handleInvalidFile}
+          disabled={isVerifying}
+        />
+
+        <FileUploadCard
+          title="Project Excel File"
+          description="Upload the Excel file containing data for the project to be verified."
+          file={projectFile}
+          onFileChange={(file) => {
+            setProjectFile(file);
+            setError(null);
+          }}
+          onInvalidFile={handleInvalidFile}
+          disabled={isVerifying}
+        />
+
+        {error && (
+          <Alert variant="destructive">
+            <AlertCircle className="h-4 w-4" />
+            <AlertTitle>Verification failed</AlertTitle>
+            <AlertDescription className="mt-1 space-y-3">
+              <p>{error}</p>
+              <Button
+                variant="outline"
+                size="sm"
+                onClick={() => {
+                  setError(null);
+                  handleVerify();
+                }}
+                disabled={isVerifying || !bothFilesSelected}
+              >
+                Try Again
+              </Button>
+            </AlertDescription>
+          </Alert>
+        )}
+
+        <div className="flex flex-col items-center gap-3">
+          <Button
+            size="lg"
+            className="w-full sm:w-auto"
+            disabled={!bothFilesSelected || isVerifying}
+            onClick={handleVerify}
+          >
+            {isVerifying ? (
+              <>
+                <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                Cross verifying...
+              </>
+            ) : (
+              "Start Cross Verification"
+            )}
+          </Button>
+
+          {result && !isVerifying && (
+            <Button variant="outline" onClick={handleReset}>
+              <RotateCcw className="mr-2 h-4 w-4" />
+              New Verification
+            </Button>
+          )}
+        </div>
+
+        {result && !isVerifying && <ComparisonResults data={result} />}
+      </main>
     </div>
   );
 }
