@@ -110,7 +110,7 @@ export function parseMainWorkbook(workbook: XLSX.WorkBook): Row[] {
       header: 1,
       raw: true,
       defval: null,
-୧    } as XLSX.Sheet2JSONOpts);
+});
     const headerIndex = grid.findIndex(
       (row) => row.filter((c) => cellText(c) !== "").length >= 3,
     );
