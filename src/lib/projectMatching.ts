@@ -42,3 +42,44 @@ export function findProjectColumn(headers: string[]): string | null {
   if (exact) return exact;
   return headers.find((h) => /project/i.test(h)) ?? null;
 }
+
+/** 
+ * Strict resolution of a project name against a list of candidates.
+ * Returns the exact matched string, or throws an error if ambiguous/not found.
+ */
+export function resolveProjectMatch(targetProject: string, candidates: string[]): string {
+  if (candidates.length === 0) {
+    throw new Error("No project candidates found in the dataset.");
+  }
+
+  // 1. Exact normalized match
+  const normalizedTarget = normalizeProjectName(targetProject);
+  const exactMatches = candidates.filter(c => normalizeProjectName(c) === normalizedTarget);
+  if (exactMatches.length === 1) return exactMatches[0];
+  if (exactMatches.length > 1) {
+    throw new Error("Multiple exact project matches found.");
+  }
+
+  // 2. Exact project code
+  const codeTarget = projectCode(targetProject);
+  if (codeTarget) {
+    const codeMatches = candidates.filter(c => projectCode(c) === codeTarget);
+    if (codeMatches.length === 1) return codeMatches[0];
+    if (codeMatches.length > 1) {
+      throw new Error("Multiple possible projects found with the same project code.");
+    }
+  }
+
+  // 3. Substring match
+  const substringMatches = candidates.filter(c => {
+    const normalizedC = normalizeProjectName(c);
+    if (!normalizedC) return false;
+    return normalizedTarget.includes(normalizedC) || normalizedC.includes(normalizedTarget);
+  });
+  if (substringMatches.length === 1) return substringMatches[0];
+  if (substringMatches.length > 1) {
+    throw new Error("Multiple possible projects found in the Main Excel. Please verify the project matching logic.");
+  }
+
+  throw new Error("The detected project could not be found in the Main Excel file.");
+}

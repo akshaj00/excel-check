@@ -12,7 +12,11 @@ import {
   type DailyReport,
   type Row,
 } from "@/lib/excel";
-import { findProjectColumn, projectMatches } from "@/lib/projectMatching";
+import {
+  findProjectColumn,
+  projectMatches,
+  resolveProjectMatch,
+} from "@/lib/projectMatching";
 import {
   analyzeProjectData,
   type ComparisonResponse,
@@ -37,11 +41,7 @@ export interface VerificationOutcome {
 
 /** Column used to match a Main Excel record to a report date. */
 export function findDateColumn(headers: string[]): string | null {
-  return (
-    headers.find((h) => /receipt\s*date/i.test(h)) ??
-    headers.find((h) => /date/i.test(h)) ??
-    null
-  );
+  return headers.find((h) => h.trim().toLowerCase() === "receipt date (rds)") ?? null;
 }
 
 /** Keeps only the Main Excel rows that belong to the detected project. */
@@ -49,8 +49,19 @@ export function filterByProject(rows: Row[], project: string): Row[] {
   if (rows.length === 0) return [];
   const headers = Object.keys(rows[0] ?? {});
   const projectColumn = findProjectColumn(headers);
-  if (!projectColumn) return [];
-  return rows.filter((row) => projectMatches(row[projectColumn], project));
+  if (!projectColumn) throw new VerificationError("Could not find a project column in Main Excel.");
+
+  const candidates = Array.from(new Set(rows.map(r => String(r[projectColumn] ?? "")).filter(val => val !== "null" && val !== "undefined" && val !== "")));
+  if (candidates.length === 0) return [];
+
+  let resolvedProject: string;
+  try {
+    resolvedProject = resolveProjectMatch(project, candidates);
+  } catch (err: any) {
+    throw new VerificationError(err.message || "Failed to resolve project match.");
+  }
+
+  return rows.filter((row) => String(row[projectColumn] ?? "") === resolvedProject);
 }
 
 /** Groups project rows by normalised date. */
@@ -59,7 +70,7 @@ export function groupByDate(rows: Row[]): Map<string, Row[]> {
   if (rows.length === 0) return grouped;
   const headers = Object.keys(rows[0] ?? {});
   const dateColumn = findDateColumn(headers);
-  if (!dateColumn) return grouped;
+  if (!dateColumn) throw new VerificationError("Required column 'Receipt Date (RDS)' not found in Main Excel.");
 
   for (const row of rows) {
     const date = normalizeDate(row[dateColumn]);

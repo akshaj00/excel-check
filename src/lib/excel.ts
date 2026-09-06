@@ -26,7 +26,7 @@ export interface ProjectReportWorkbook {
 /** Reads a File into a SheetJS workbook. */
 export async function readWorkbook(file: File): Promise<XLSX.WorkBook> {
   const buffer = await file.arrayBuffer();
-  return XLSX.read(buffer, { type: "array", cellDates: true });
+  return XLSX.read(buffer, { type: "array" });
 }
 
 /** Pads a number to two digits. */
@@ -34,9 +34,9 @@ function pad(value: number): string {
   return String(value).padStart(2, "0");
 }
 
-/** Formats a Date as DD/MM/YYYY. */
+/** Formats a Date as YYYY-MM-DD using UTC to prevent timezone shifts. */
 export function formatDate(date: Date): string {
-  return `${pad(date.getDate())}/${pad(date.getMonth() + 1)}/${date.getFullYear()}`;
+  return `${date.getUTCFullYear()}-${pad(date.getUTCMonth() + 1)}-${pad(date.getUTCDate())}`;
 }
 
 /**
@@ -52,9 +52,10 @@ export function normalizeDate(value: unknown): string | null {
 
   // Excel serial number
   if (typeof value === "number" && Number.isFinite(value) && value > 0) {
-    const parsed = XLSX.SSF.parse_date_code(value);
+    const SSF = XLSX.SSF || (XLSX as any).default?.SSF;
+    const parsed = SSF?.parse_date_code(value);
     if (parsed && parsed.y > 1900) {
-      return `${pad(parsed.d)}/${pad(parsed.m)}/${parsed.y}`;
+      return `${parsed.y}-${pad(parsed.m)}-${pad(parsed.d)}`;
     }
     return null;
   }
@@ -63,15 +64,32 @@ export function normalizeDate(value: unknown): string | null {
   const text = value.trim();
   if (!text) return null;
 
-  // DD/MM/YYYY or DD-MM-YYYY (also 2-digit years)
+  // DD/MM/YYYY or MM/DD/YYYY (also 2-digit years)
   const dmy = text.match(/^(\d{1,2})[/\-.](\d{1,2})[/\-.](\d{2,4})$/);
   if (dmy) {
-    const day = Number(dmy[1]);
-    const month = Number(dmy[2]);
+    let p1 = Number(dmy[1]);
+    let p2 = Number(dmy[2]);
     let year = Number(dmy[3]);
     if (year < 100) year += 2000;
+    
+    let month = p2;
+    let day = p1;
+    // Check if it's MM/DD/YYYY
+    if (p1 <= 12 && p2 > 12) {
+      month = p1;
+      day = p2;
+    } else if (p1 <= 12 && p2 <= 12) {
+      // Ambiguous, let's check if JS Date thinks it's a valid US date.
+      // JS Date parses "8/3/2026" as Aug 3 (US format).
+      const d = new Date(`${p1}/${p2}/${year}`);
+      if (!Number.isNaN(d.getTime()) && d.getMonth() + 1 === p1) {
+        month = p1;
+        day = p2;
+      }
+    }
+    
     if (day >= 1 && day <= 31 && month >= 1 && month <= 12) {
-      return `${pad(day)}/${pad(month)}/${year}`;
+      return `${year}-${pad(month)}-${pad(day)}`;
     }
     return null;
   }
@@ -79,7 +97,7 @@ export function normalizeDate(value: unknown): string | null {
   // YYYY-MM-DD
   const ymd = text.match(/^(\d{4})[/\-.](\d{1,2})[/\-.](\d{1,2})/);
   if (ymd) {
-    return `${pad(Number(ymd[3]))}/${pad(Number(ymd[2]))}/${Number(ymd[1])}`;
+    return `${Number(ymd[1])}-${pad(Number(ymd[2]))}-${pad(Number(ymd[3]))}`;
   }
 
   const parsedDate = new Date(text);
