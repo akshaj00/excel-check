@@ -20,6 +20,7 @@ export interface DailyReport {
 
 export interface ProjectReportWorkbook {
   project: string | null;
+  projectCandidates: string[];
   reports: DailyReport[];
 }
 
@@ -155,7 +156,8 @@ const DATE_LABEL = /^date\b/i;
 
 /**
  * Looks for a "label: value" pair near the top of a sheet grid.
- * The value may sit in the same row (to the right) or in the row below.
+ * The value may sit in the same row (to the right), in the row below,
+ * or inline in the same cell (e.g. "Project: 303col").
  */
 function findLabelledValue(
   grid: unknown[][],
@@ -166,7 +168,18 @@ function findLabelledValue(
   for (let r = 0; r < limit; r++) {
     const row = grid[r] ?? [];
     for (let c = 0; c < row.length; c++) {
-      const text = cellText(row[c]).replace(/:$/, "");
+      const rawText = cellText(row[c]);
+
+      // Check for inline "Project: Value" or "Date: Value" in the exact same cell
+      const inlineMatch = rawText.match(/^(?:project|date)[:\s-]+(.+)/i);
+      if (inlineMatch && inlineMatch[1]?.trim()) {
+        const fieldName = rawText.split(/[:\s-]/)[0];
+        if (fieldName && labelPattern.test(fieldName)) {
+          return inlineMatch[1].trim();
+        }
+      }
+
+      const text = rawText.replace(/:$/, "").trim();
       if (!labelPattern.test(text)) continue;
 
       for (let k = c + 1; k < row.length; k++) {
@@ -204,13 +217,25 @@ export function parseProjectReport(
     if (projectValue) projectCandidates.push(projectValue);
 
     const dateValue = findLabelledValue(grid, DATE_LABEL);
-    const date = normalizeDate(dateValue) ?? normalizeDate(sheetName);
+    let date = normalizeDate(dateValue) ?? normalizeDate(sheetName);
     if (!date) continue;
+
+    // If sheet name has explicit DD-MM or D-MM (e.g. "20-08"), ensure the day matches the sheet tab,
+    // which guards against copy-paste mistakes inside the date cell (e.g. sheet 20-08 keeping date 19-08).
+    const sheetMatch = sheetName.trim().match(/^(\d{1,2})[/\-.](\d{1,2})$/);
+    if (sheetMatch && date) {
+      const sDay = Number(sheetMatch[1]);
+      const sMonth = Number(sheetMatch[2]);
+      const parts = date.split("-");
+      if (parts.length === 3 && Number(parts[1]) === sMonth && Number(parts[2]) !== sDay) {
+        date = `${parts[0]}-${pad(sMonth)}-${pad(sDay)}`;
+      }
+    }
 
     reports.push({ sheet: sheetName, date, grid });
   }
 
-  // Most frequent project string wins.
+  // Most frequent project string wins as default.
   const counts = new Map<string, number>();
   for (const candidate of projectCandidates) {
     counts.set(candidate, (counts.get(candidate) ?? 0) + 1);
@@ -224,5 +249,9 @@ export function parseProjectReport(
     }
   }
 
-  return { project, reports };
+  return {
+    project,
+    projectCandidates: Array.from(new Set(projectCandidates)),
+    reports,
+  };
 }

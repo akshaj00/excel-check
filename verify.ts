@@ -3,7 +3,7 @@ import * as path from "path";
 import * as fs from "fs";
 import { parseMainWorkbook, parseProjectReport, normalizeDate } from "./src/lib/excel";
 import { resolveProjectMatch, findProjectColumn } from "./src/lib/projectMatching";
-import { findDateColumn, filterByProject, groupByDate } from "./src/lib/verification";
+import { findDateColumn, filterByProject, groupByDate, groupByCloseoutDate } from "./src/lib/verification";
 import { analyzeProjectData, type DateBucket } from "./src/lib/comparison";
 
 async function main() {
@@ -17,8 +17,8 @@ async function main() {
   console.log("\nReading files...");
   const mainBuf = fs.readFileSync(mainFile);
   const projBuf = fs.readFileSync(projectFile);
-  const mainWb = XLSX.read(mainBuf, { cellDates: true });
-  const projWb = XLSX.read(projBuf, { cellDates: true });
+  const mainWb = XLSX.read(mainBuf, { type: "buffer" });
+  const projWb = XLSX.read(projBuf, { type: "buffer" });
   
   console.log("\nParsing Daily Report...");
   const projParsed = parseProjectReport(projWb);
@@ -81,7 +81,8 @@ async function main() {
     let combinedPass = true;
     let projectRows = [];
     try {
-        projectRows = filterByProject(mainRows, projParsed.project as string);
+        const res = filterByProject(mainRows, projParsed.project as string);
+        projectRows = res.rows;
     } catch(e: any) {
         console.log(`FAIL (${e.message})`);
         combinedPass = false;
@@ -89,11 +90,14 @@ async function main() {
     
     if (combinedPass) {
         const grouped = groupByDate(projectRows);
+        const closeoutGrouped = groupByCloseoutDate(projectRows);
         console.log("PASS");
         
         const buckets: DateBucket[] = projParsed.reports.map(report => ({
             report,
-            mainRows: grouped.get(report.date) ?? []
+            mainRows: grouped.get(report.date) ?? [],
+            closeoutRows: closeoutGrouped.get(report.date) ?? [],
+            allProjectRows: projectRows
         }));
         
         const comparison = analyzeProjectData(projParsed.project as string, buckets);

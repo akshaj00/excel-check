@@ -6,7 +6,6 @@ import { Button } from "@/components/ui/button";
 import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
 import { FileUploadCard } from "@/components/FileUploadCard";
 import { ComparisonResults } from "@/components/ComparisonResults";
-import { DetectedReports } from "@/components/DetectedReports";
 import {
   ProcessingStatus,
   type StatusStep,
@@ -41,28 +40,30 @@ export const Route = createFileRoute("/")({
 
 function Index() {
   const [mainFile, setMainFile] = useState<File | null>(null);
-  const [projectFile, setProjectFile] = useState<File | null>(null);
+  const [projectFiles, setProjectFiles] = useState<File[]>([]);
   const [isVerifying, setIsVerifying] = useState(false);
   const [outcome, setOutcome] = useState<VerificationOutcome | null>(null);
   const [error, setError] = useState<string | null>(null);
 
-  const bothFilesSelected = mainFile !== null && projectFile !== null;
+  const bothFilesSelected = mainFile !== null && projectFiles.length > 0;
 
   const handleInvalidFile = () => {
     setError("Invalid file type. Please upload a .xlsx or .xls Excel file.");
   };
 
   const handleVerify = async () => {
-    if (!mainFile && !projectFile) {
-      setError("Please upload the Main Excel file and the Project Report Excel file.");
+    if (!mainFile && projectFiles.length === 0) {
+      setError(
+        "Please upload the Main Excel file and at least one Project Report file.",
+      );
       return;
     }
     if (!mainFile) {
       setError("Please upload the Main Excel file.");
       return;
     }
-    if (!projectFile) {
-      setError("Please upload the Project Report Excel file.");
+    if (projectFiles.length === 0) {
+      setError("Please upload at least one Project Report Excel file.");
       return;
     }
 
@@ -70,7 +71,7 @@ function Index() {
     setOutcome(null);
     setIsVerifying(true);
     try {
-      const result = await runVerification(mainFile, projectFile);
+      const result = await runVerification(mainFile, projectFiles);
       setOutcome(result);
     } catch (err) {
       setError(
@@ -85,7 +86,7 @@ function Index() {
 
   const handleReset = () => {
     setMainFile(null);
-    setProjectFile(null);
+    setProjectFiles([]);
     setOutcome(null);
     setError(null);
     setIsVerifying(false);
@@ -98,13 +99,20 @@ function Index() {
       state: mainFile ? "done" : "pending",
     },
     {
-      label: "Project Report uploaded",
-      detail: projectFile?.name,
-      state: projectFile ? "done" : "pending",
+      label: "Project Reports uploaded",
+      detail:
+        projectFiles.length > 0
+          ? `${projectFiles.length} file${projectFiles.length > 1 ? "s" : ""} selected`
+          : undefined,
+      state: projectFiles.length > 0 ? "done" : "pending",
     },
     {
-      label: "Project identified",
-      detail: outcome?.project,
+      label: "Projects identified",
+      detail: outcome?.projects
+        ? outcome.projects
+            .map((p) => p.matchedProjectCode || p.project)
+            .join(", ")
+        : outcome?.project,
       state: outcome ? "done" : isVerifying ? "active" : "pending",
     },
     {
@@ -129,7 +137,7 @@ function Index() {
   return (
     <div className="min-h-screen bg-muted/30">
       <header className="border-b border-border bg-background">
-        <div className="mx-auto flex max-w-3xl items-center gap-3 px-4 py-6">
+        <div className="mx-auto flex max-w-4xl items-center gap-3 px-4 py-6">
           <div className="flex h-10 w-10 items-center justify-center rounded-md bg-primary/10">
             <FileSpreadsheet className="h-5 w-5 text-primary" />
           </div>
@@ -144,7 +152,7 @@ function Index() {
         </div>
       </header>
 
-      <main className="mx-auto max-w-3xl space-y-6 px-4 py-8">
+      <main className="mx-auto max-w-4xl space-y-6 px-4 py-8">
         <FileUploadCard
           title="Main Excel File"
           description="Upload the Excel file containing data for all projects."
@@ -158,11 +166,12 @@ function Index() {
         />
 
         <FileUploadCard
-          title="Project Daily Report"
-          description="Upload the project's daily report workbook. The project and dates are detected automatically."
-          file={projectFile}
-          onFileChange={(file) => {
-            setProjectFile(file);
+          title="Project Daily Reports"
+          description="Upload one or more project daily report workbooks. Projects and dates are detected automatically."
+          multiple={true}
+          files={projectFiles}
+          onFilesChange={(files) => {
+            setProjectFiles(files);
             setError(null);
           }}
           onInvalidFile={handleInvalidFile}
@@ -176,7 +185,7 @@ function Index() {
             <AlertCircle className="h-4 w-4" />
             <AlertTitle>Verification failed</AlertTitle>
             <AlertDescription className="mt-1 space-y-3">
-              <p>{error}</p>
+              <p className="whitespace-pre-line">{error}</p>
               <Button
                 variant="outline"
                 size="sm"
@@ -195,22 +204,22 @@ function Index() {
         <div className="flex flex-col items-center gap-3">
           <Button
             size="lg"
-            className="w-full sm:w-auto"
+            className="w-full sm:w-auto cursor-pointer"
             disabled={!bothFilesSelected || isVerifying}
             onClick={handleVerify}
           >
             {isVerifying ? (
               <>
                 <Loader2 className="mr-2 h-4 w-4 animate-spin" />
-                Cross verifying...
+                Cross verifying {projectFiles.length} project {projectFiles.length === 1 ? "report" : "reports"}...
               </>
             ) : (
-              "Start Cross Verification"
+              `Start Cross Verification${projectFiles.length > 1 ? ` (${projectFiles.length} reports)` : ""}`
             )}
           </Button>
 
           {outcome && !isVerifying && (
-            <Button variant="outline" onClick={handleReset}>
+            <Button variant="outline" onClick={handleReset} className="cursor-pointer">
               <RotateCcw className="mr-2 h-4 w-4" />
               New Verification
             </Button>
@@ -218,13 +227,14 @@ function Index() {
         </div>
 
         {outcome && !isVerifying && (
-          <>
-            <DetectedReports
-              project={outcome.project}
-              reports={outcome.detectedReports}
-            />
-            <ComparisonResults data={outcome.comparison} />
-          </>
+          <ComparisonResults
+            outcome={outcome}
+            projects={outcome.projects}
+            data={outcome.comparison}
+            detectedReports={outcome.detectedReports}
+            matchedProjectCode={outcome.matchedProjectCode}
+            matchMethod={outcome.matchMethod}
+          />
         )}
       </main>
     </div>

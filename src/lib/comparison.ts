@@ -47,8 +47,12 @@ export interface ComparisonResponse {
 export interface RuleContext {
   project: string;
   date: string;
-  /** Main Excel rows for this project + date. */
+  /** Main Excel rows for this project + date (filtered by Receipt Date). */
   mainRows: Row[];
+  /** Main Excel rows for this project filtered by TRN Close-out Date. */
+  closeoutRows?: Row[];
+  /** All Main Excel rows for this project. */
+  allProjectRows?: Row[];
   /** The daily report sheet for this date. */
   report: DailyReport;
 }
@@ -58,6 +62,8 @@ export type ComparisonRule = (context: RuleContext) => ComparisonResultRow[];
 export interface DateBucket {
   report: DailyReport;
   mainRows: Row[];
+  closeoutRows?: Row[];
+  allProjectRows?: Row[];
 }
 
 /**
@@ -68,33 +74,44 @@ export function analyzeProjectData(
   project: string,
   buckets: DateBucket[],
 ): ComparisonResponse {
-  const dates: DateComparison[] = buckets.map(({ report, mainRows }) => {
-    const results: ComparisonResultRow[] = [];
+  const dates: DateComparison[] = buckets.map(
+    ({ report, mainRows, closeoutRows, allProjectRows }) => {
+      const results: ComparisonResultRow[] = [];
+      const hasRecords =
+        mainRows.length > 0 || (closeoutRows && closeoutRows.length > 0);
 
-    if (mainRows.length > 0) {
-      for (const rule of COMPARISON_RULES) {
-        try {
-          results.push(
-            ...rule({ project, date: report.date, mainRows, report }),
-          );
-        } catch {
-          // A failing rule must not break the whole verification.
+      if (hasRecords || (report.grid && report.grid.length > 0)) {
+        for (const rule of COMPARISON_RULES) {
+          try {
+            results.push(
+              ...rule({
+                project,
+                date: report.date,
+                mainRows,
+                closeoutRows,
+                allProjectRows,
+                report,
+              }),
+            );
+          } catch {
+            // A failing rule must not break the whole verification.
+          }
         }
       }
-    }
 
-    return {
-      date: report.date,
-      sheet: report.sheet,
-      mainRecordCount: mainRows.length,
-      ...(mainRows.length === 0
-        ? {
-            error: `${report.date} was not found for this project in the Main Excel file.`,
-          }
-        : {}),
-      results,
-    };
-  });
+      return {
+        date: report.date,
+        sheet: report.sheet,
+        mainRecordCount: mainRows.length,
+        ...(!hasRecords
+          ? {
+              error: `${report.date} was not found for this project in the Main Excel file.`,
+            }
+          : {}),
+        results,
+      };
+    },
+  );
 
   const all = dates.flatMap((d) => d.results);
   const summary: ComparisonSummary = {
