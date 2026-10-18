@@ -7,7 +7,7 @@ async function main() {
   const projectFile = path.resolve("./test-data/352 MAC- DOCUMENT CONTROLLER DAILY REPORT -AUG.xlsx");
   const mainFile = path.resolve("./test-data/Project file.xlsx");
 
-  // Read Daily Report
+  // Read Daily Reportt
   const projBuf = fs.readFileSync(projectFile);
   const projWb = XLSX.read(projBuf, { cellDates: true });
   const sheet = projWb.Sheets["3-08"];
