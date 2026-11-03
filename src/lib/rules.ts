@@ -11,6 +11,17 @@
 import type { ComparisonRule, ComparisonResultRow } from "@/lib/comparison";
 import { normalizeDate } from "@/lib/excel";
 
+/** A standalone zero denotes no report-side transmittal; preserve identifiers such as 09 and 001. */
+function isReportTransmittalIdentifier(value: unknown): boolean {
+  const text = String(value ?? "").trim();
+  return (
+    text !== "" &&
+    text !== "0" &&
+    text.toLowerCase() !== "null" &&
+    text.toLowerCase() !== "undefined"
+  );
+}
+
 export const incomingTransmittalsRule: ComparisonRule = (context) => {
   const { report, mainRows, date } = context;
   const grid = report.grid;
@@ -52,8 +63,8 @@ export const incomingTransmittalsRule: ComparisonRule = (context) => {
       totalRowIdx = r;
       break;
     }
-    // Count rows that have a transmittal identifier (not empty)
-    if (cell0 !== "" && cell0 !== "null") {
+    // A standalone 0 means there were no incoming transmittals that day.
+    if (isReportTransmittalIdentifier(row[0])) {
       reportTransmittalsCount++;
     }
   }
@@ -152,7 +163,7 @@ export const closeoutTransmittalsRule: ComparisonRule = (context) => {
   for (let r = headerRow + 1; r < endRow; r++) {
     const row = grid[r] || [];
     const tVal = String(row[closeoutTransmittalCol] ?? "").trim();
-    if (tVal !== "" && tVal.toLowerCase() !== "null" && tVal.toLowerCase() !== "undefined") {
+    if (isReportTransmittalIdentifier(tVal)) {
       reportCloseoutTransmittalsCount++;
     }
     fallbackDocsSum += Number(row[closeoutDocsColReport]) || 0;

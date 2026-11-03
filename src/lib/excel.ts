@@ -65,8 +65,23 @@ export function normalizeDate(value: unknown): string | null {
   const text = value.trim();
   if (!text) return null;
 
+  // Dotted dates in the daily reports use DD.MM.YYYY, so never apply the
+  // US month/day interpretation to them.
+  const dottedDmy = text.match(/^(\d{1,2})\.(\d{1,2})\.(\d{2,4})$/);
+  if (dottedDmy) {
+    const day = Number(dottedDmy[1]);
+    const month = Number(dottedDmy[2]);
+    let year = Number(dottedDmy[3]);
+    if (year < 100) year += 2000;
+
+    if (day >= 1 && day <= 31 && month >= 1 && month <= 12) {
+      return `${year}-${pad(month)}-${pad(day)}`;
+    }
+    return null;
+  }
+
   // DD/MM/YYYY or MM/DD/YYYY (also 2-digit years)
-  const dmy = text.match(/^(\d{1,2})[/\-.](\d{1,2})[/\-.](\d{2,4})$/);
+  const dmy = text.match(/^(\d{1,2})[/-](\d{1,2})[/-](\d{2,4})$/);
   if (dmy) {
     let p1 = Number(dmy[1]);
     let p2 = Number(dmy[2]);
