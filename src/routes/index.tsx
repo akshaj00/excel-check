@@ -6,6 +6,7 @@ import { Button } from "@/components/ui/button";
 import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
 import { FileUploadCard } from "@/components/FileUploadCard";
 import { ComparisonResults } from "@/components/ComparisonResults";
+import { TemplateDownloadCard } from "@/components/TemplateDownloadCard";
 import {
   ProcessingStatus,
   type StatusStep,
@@ -235,6 +236,10 @@ function Index() {
             matchedProjectCode={outcome.matchedProjectCode}
             matchMethod={outcome.matchMethod}
           />
+        )}
+
+        {outcome && !isVerifying && (
+          <TemplateDownloadCard projects={outcome.projects} />
         )}
       </main>
     </div>
