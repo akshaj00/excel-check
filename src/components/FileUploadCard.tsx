@@ -1,7 +1,7 @@
 import { useCallback, useRef, useState } from "react";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
-import { FileSpreadsheet, UploadCloud, X } from "lucide-react";
+import { FileSpreadsheet, UploadCloud, X, type LucideIcon } from "lucide-react";
 
 const ACCEPTED_EXTENSIONS = [".xlsx", ".xls"];
 
@@ -26,6 +26,10 @@ interface FileUploadCardProps {
   onFilesChange?: (files: File[]) => void;
   onInvalidFile: () => void;
   disabled?: boolean;
+  /** Step number shown in the card header. */
+  step?: number;
+  /** Icon shown in the card header. */
+  icon?: LucideIcon;
 }
 
 export function FileUploadCard({
@@ -38,6 +42,8 @@ export function FileUploadCard({
   onFilesChange,
   onInvalidFile,
   disabled,
+  step,
+  icon: Icon = FileSpreadsheet,
 }: FileUploadCardProps) {
   const inputRef = useRef<HTMLInputElement>(null);
   const [isDragging, setIsDragging] = useState(false);
@@ -74,21 +80,36 @@ export function FileUploadCard({
   };
 
   return (
-    <Card>
-      <CardHeader className="pb-3">
-        <div className="flex items-center justify-between">
-          <div>
-            <CardTitle className="text-base font-semibold">{title}</CardTitle>
-            <p className="text-sm text-muted-foreground">{description}</p>
+    <Card className="flex h-full flex-col">
+      <CardHeader className="pb-4">
+        <div className="flex items-start justify-between gap-3">
+          <div className="flex items-start gap-3">
+            <div className="relative flex h-10 w-10 shrink-0 items-center justify-center rounded-lg bg-primary/10 text-primary">
+              <Icon className="h-5 w-5" />
+              {step !== undefined && (
+                <span className="absolute -left-1.5 -top-1.5 flex h-5 w-5 items-center justify-center rounded-full bg-primary text-[10px] font-bold text-primary-foreground ring-2 ring-card">
+                  {step}
+                </span>
+              )}
+            </div>
+            <div className="space-y-1">
+              <CardTitle className="text-base font-semibold">{title}</CardTitle>
+              <p className="text-sm leading-snug text-muted-foreground">{description}</p>
+            </div>
           </div>
           {multiple && files.length > 0 && (
-            <span className="rounded-full bg-primary/10 px-2.5 py-0.5 text-xs font-medium text-primary">
+            <span className="shrink-0 rounded-full bg-primary/10 px-2.5 py-0.5 text-xs font-medium text-primary">
               {files.length} {files.length === 1 ? "report" : "reports"}
+            </span>
+          )}
+          {!multiple && file && (
+            <span className="shrink-0 rounded-full bg-emerald-100 px-2.5 py-0.5 text-xs font-medium text-emerald-800">
+              Ready
             </span>
           )}
         </div>
       </CardHeader>
-      <CardContent className="space-y-3">
+      <CardContent className="flex flex-1 flex-col space-y-3">
         <input
           ref={inputRef}
           type="file"
@@ -104,7 +125,7 @@ export function FileUploadCard({
         {multiple ? (
           files.length > 0 ? (
             <div className="space-y-2">
-              <div className="max-h-52 overflow-y-auto space-y-1.5 pr-1">
+              <div className="max-h-56 overflow-y-auto space-y-1.5 pr-1">
                 {files.map((f, idx) => (
                   <div
                     key={`${f.name}-${idx}`}
@@ -163,10 +184,10 @@ export function FileUploadCard({
               role="button"
               tabIndex={0}
               aria-label={`Upload ${title}`}
-              className={`flex cursor-pointer flex-col items-center justify-center gap-2 rounded-md border border-dashed px-4 py-8 text-center transition-colors ${
+              className={`flex flex-1 cursor-pointer flex-col items-center justify-center gap-2 rounded-lg border-2 border-dashed px-4 py-10 text-center transition-colors ${
                 isDragging
                   ? "border-primary bg-accent"
-                  : "border-input hover:border-primary/60 hover:bg-muted/30"
+                  : "border-border bg-muted/20 hover:border-primary/50 hover:bg-primary/5"
               }`}
               onClick={() => inputRef.current?.click()}
               onKeyDown={(e) => {
@@ -186,9 +207,9 @@ export function FileUploadCard({
                 handleFiles(e.dataTransfer.files);
               }}
             >
-              <UploadCloud className="h-8 w-8 text-muted-foreground" />
+              <UploadCloud className="h-9 w-9 text-primary/70" />
               <p className="text-sm text-muted-foreground">
-                Drag and drop your project report files here (you can select multiple), or
+                Drag and drop daily report files here, or
               </p>
               <Button
                 type="button"
@@ -202,12 +223,12 @@ export function FileUploadCard({
                 Browse Files
               </Button>
               <p className="text-xs text-muted-foreground">
-                Upload one or multiple .xlsx / .xls files
+                Multiple .xlsx / .xls files supported
               </p>
             </div>
           )
         ) : file ? (
-          <div className="flex items-center justify-between rounded-md border border-border bg-muted/40 px-4 py-3">
+          <div className="flex items-center justify-between rounded-lg border border-emerald-200 bg-emerald-50/50 px-4 py-3">
             <div className="flex min-w-0 items-center gap-3">
               <FileSpreadsheet className="h-8 w-8 shrink-0 text-primary" />
               <div className="min-w-0">
@@ -234,10 +255,10 @@ export function FileUploadCard({
             role="button"
             tabIndex={0}
             aria-label={`Upload ${title}`}
-            className={`flex cursor-pointer flex-col items-center justify-center gap-2 rounded-md border border-dashed px-4 py-8 text-center transition-colors ${
+            className={`flex flex-1 cursor-pointer flex-col items-center justify-center gap-2 rounded-lg border-2 border-dashed px-4 py-10 text-center transition-colors ${
               isDragging
                 ? "border-primary bg-accent"
-                : "border-input hover:border-primary/60 hover:bg-muted/30"
+                : "border-border bg-muted/20 hover:border-primary/50 hover:bg-primary/5"
             }`}
             onClick={() => inputRef.current?.click()}
             onKeyDown={(e) => {
@@ -257,9 +278,9 @@ export function FileUploadCard({
               handleFiles(e.dataTransfer.files);
             }}
           >
-            <UploadCloud className="h-8 w-8 text-muted-foreground" />
+            <UploadCloud className="h-9 w-9 text-primary/70" />
             <p className="text-sm text-muted-foreground">
-              Drag and drop your Excel file here, or
+              Drag and drop the SharePoint export here, or
             </p>
             <Button
               type="button"

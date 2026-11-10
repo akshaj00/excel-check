@@ -1,6 +1,14 @@
 import { createFileRoute } from "@tanstack/react-router";
 import { useState } from "react";
-import { AlertCircle, FileSpreadsheet, Loader2, RotateCcw } from "lucide-react";
+import {
+  AlertCircle,
+  ClipboardList,
+  Cloud,
+  Loader2,
+  Lock,
+  RotateCcw,
+  ScanSearch,
+} from "lucide-react";
 
 import { Button } from "@/components/ui/button";
 import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
@@ -17,20 +25,23 @@ import {
   type VerificationOutcome,
 } from "@/lib/verification";
 
+const APP_NAME = "DocTally";
+const APP_TAGLINE = "SharePoint vs. daily report reconciliation";
+
 export const Route = createFileRoute("/")({
   head: () => ({
     meta: [
-      { title: "Excel Cross Verification Tool" },
+      { title: `${APP_NAME} — ${APP_TAGLINE}` },
       {
         name: "description",
         content:
-          "Upload a main Excel file and a project daily report to cross-verify project data directly in your browser.",
+          "Upload the SharePoint file and project daily reports to reconcile document control figures directly in your browser.",
       },
-      { property: "og:title", content: "Excel Cross Verification Tool" },
+      { property: "og:title", content: APP_NAME },
       {
         property: "og:description",
         content:
-          "Cross-check daily project reports against the main project database — entirely in the browser.",
+          "Reconcile document controller daily reports against the SharePoint register — entirely in the browser.",
       },
       { property: "og:type", content: "website" },
       { name: "twitter:card", content: "summary" },
@@ -55,12 +66,12 @@ function Index() {
   const handleVerify = async () => {
     if (!mainFile && projectFiles.length === 0) {
       setError(
-        "Please upload the Main Excel file and at least one Project Report file.",
+        "Please upload the SharePoint file and at least one Project Report file.",
       );
       return;
     }
     if (!mainFile) {
-      setError("Please upload the Main Excel file.");
+      setError("Please upload the SharePoint file.");
       return;
     }
     if (projectFiles.length === 0) {
@@ -95,7 +106,7 @@ function Index() {
 
   const steps: StatusStep[] = [
     {
-      label: "Main Excel uploaded",
+      label: "SharePoint file uploaded",
       detail: mainFile?.name,
       state: mainFile ? "done" : "pending",
     },
@@ -123,7 +134,7 @@ function Index() {
       state: outcome ? "done" : isVerifying ? "active" : "pending",
     },
     {
-      label: "Main Excel records filtered",
+      label: "SharePoint records filtered",
       detail: outcome
         ? `${outcome.projectRowCount} of ${outcome.mainRowCount} records`
         : undefined,
@@ -135,54 +146,84 @@ function Index() {
     },
   ];
 
+  const verifyLabel = `Start Cross Verification${projectFiles.length > 1 ? ` (${projectFiles.length} reports)` : ""}`;
+
   return (
-    <div className="min-h-screen bg-muted/30">
-      <header className="border-b border-border bg-background">
-        <div className="mx-auto flex max-w-4xl items-center gap-3 px-4 py-6">
-          <div className="flex h-10 w-10 items-center justify-center rounded-md bg-primary/10">
-            <FileSpreadsheet className="h-5 w-5 text-primary" />
+    <div className="min-h-screen bg-gradient-to-b from-primary/[0.06] via-muted/30 to-muted/30">
+      <header className="sticky top-0 z-20 border-b border-border/70 bg-background/85 backdrop-blur supports-[backdrop-filter]:bg-background/70">
+        <div className="mx-auto flex h-16 max-w-6xl items-center justify-between gap-4 px-4 sm:px-6">
+          <div className="flex items-center gap-3">
+            <div className="flex h-9 w-9 items-center justify-center rounded-lg bg-primary text-primary-foreground shadow-sm">
+              <ScanSearch className="h-5 w-5" />
+            </div>
+            <div className="leading-tight">
+              <p className="text-base font-bold tracking-tight text-foreground">
+                {APP_NAME}
+              </p>
+              <p className="text-xs text-muted-foreground">{APP_TAGLINE}</p>
+            </div>
           </div>
-          <div>
-            <h1 className="text-xl font-semibold tracking-tight text-foreground">
-              Excel Cross Verification
-            </h1>
-            <p className="text-sm text-muted-foreground">
-              Compare daily project reports against the main project database
-            </p>
-          </div>
+          {outcome && !isVerifying && (
+            <Button
+              variant="outline"
+              size="sm"
+              onClick={handleReset}
+              className="cursor-pointer"
+            >
+              <RotateCcw className="mr-1.5 h-3.5 w-3.5" />
+              New Verification
+            </Button>
+          )}
         </div>
       </header>
 
-      <main className="mx-auto max-w-4xl space-y-6 px-4 py-8">
-        <FileUploadCard
-          title="Main Excel File"
-          description="Upload the Excel file containing data for all projects."
-          file={mainFile}
-          onFileChange={(file) => {
-            setMainFile(file);
-            setError(null);
-          }}
-          onInvalidFile={handleInvalidFile}
-          disabled={isVerifying}
-        />
+      <main className="mx-auto max-w-6xl space-y-6 px-4 py-8 sm:px-6 sm:py-10">
+        <section className="space-y-2">
+          <h1 className="text-2xl font-bold tracking-tight text-foreground sm:text-3xl">
+            Reconcile daily reports in minutes
+          </h1>
+          <p className="max-w-2xl text-sm text-muted-foreground sm:text-base">
+            Upload the SharePoint file and your project daily reports. {APP_NAME}{" "}
+            checks every transmittal, drawing and close-out figure, then lets you
+            export the verified daily summary.
+          </p>
+        </section>
 
-        <FileUploadCard
-          title="Project Daily Reports"
-          description="Upload one or more project daily report workbooks. Projects and dates are detected automatically."
-          multiple={true}
-          files={projectFiles}
-          onFilesChange={(files) => {
-            setProjectFiles(files);
-            setError(null);
-          }}
-          onInvalidFile={handleInvalidFile}
-          disabled={isVerifying}
-        />
+        <div className="grid gap-4 md:grid-cols-2">
+          <FileUploadCard
+            step={1}
+            icon={Cloud}
+            title="SharePoint File"
+            description="The SharePoint export containing data for all projects."
+            file={mainFile}
+            onFileChange={(file) => {
+              setMainFile(file);
+              setError(null);
+            }}
+            onInvalidFile={handleInvalidFile}
+            disabled={isVerifying}
+          />
+
+          <FileUploadCard
+            step={2}
+            icon={ClipboardList}
+            title="Project Daily Reports"
+            description="One or more daily report workbooks. Projects and dates are detected automatically."
+            multiple={true}
+            files={projectFiles}
+            onFilesChange={(files) => {
+              setProjectFiles(files);
+              setError(null);
+            }}
+            onInvalidFile={handleInvalidFile}
+            disabled={isVerifying}
+          />
+        </div>
 
         <ProcessingStatus steps={steps} />
 
         {error && (
-          <Alert variant="destructive">
+          <Alert variant="destructive" className="bg-destructive/5">
             <AlertCircle className="h-4 w-4" />
             <AlertTitle>Verification failed</AlertTitle>
             <AlertDescription className="mt-1 space-y-3">
@@ -202,30 +243,47 @@ function Index() {
           </Alert>
         )}
 
-        <div className="flex flex-col items-center gap-3">
-          <Button
-            size="lg"
-            className="w-full sm:w-auto cursor-pointer"
-            disabled={!bothFilesSelected || isVerifying}
-            onClick={handleVerify}
-          >
-            {isVerifying ? (
-              <>
-                <Loader2 className="mr-2 h-4 w-4 animate-spin" />
-                Cross verifying {projectFiles.length} project {projectFiles.length === 1 ? "report" : "reports"}...
-              </>
-            ) : (
-              `Start Cross Verification${projectFiles.length > 1 ? ` (${projectFiles.length} reports)` : ""}`
+        <div className="flex flex-col items-stretch gap-3 rounded-xl border border-border bg-card p-4 shadow-sm sm:flex-row sm:items-center sm:justify-between sm:px-5">
+          <p className="flex items-center gap-2 text-xs text-muted-foreground">
+            <Lock className="h-3.5 w-3.5 shrink-0" />
+            Files are processed locally in your browser and never uploaded.
+          </p>
+          <div className="flex flex-col gap-2 sm:flex-row">
+            {outcome && !isVerifying && (
+              <Button
+                variant="outline"
+                onClick={handleReset}
+                className="cursor-pointer"
+              >
+                <RotateCcw className="mr-2 h-4 w-4" />
+                New Verification
+              </Button>
             )}
-          </Button>
-
-          {outcome && !isVerifying && (
-            <Button variant="outline" onClick={handleReset} className="cursor-pointer">
-              <RotateCcw className="mr-2 h-4 w-4" />
-              New Verification
+            <Button
+              size="lg"
+              className="cursor-pointer shadow-sm"
+              disabled={!bothFilesSelected || isVerifying}
+              onClick={handleVerify}
+            >
+              {isVerifying ? (
+                <>
+                  <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                  Cross verifying {projectFiles.length} project{" "}
+                  {projectFiles.length === 1 ? "report" : "reports"}...
+                </>
+              ) : (
+                <>
+                  <ScanSearch className="mr-2 h-4 w-4" />
+                  {verifyLabel}
+                </>
+              )}
             </Button>
-          )}
+          </div>
         </div>
+
+        {outcome && !isVerifying && (
+          <TemplateDownloadCard projects={outcome.projects} />
+        )}
 
         {outcome && !isVerifying && (
           <ComparisonResults
@@ -237,11 +295,13 @@ function Index() {
             matchMethod={outcome.matchMethod}
           />
         )}
-
-        {outcome && !isVerifying && (
-          <TemplateDownloadCard projects={outcome.projects} />
-        )}
       </main>
+
+      <footer className="border-t border-border/70 py-6">
+        <p className="mx-auto max-w-6xl px-4 text-center text-xs text-muted-foreground sm:px-6">
+          {APP_NAME} · {APP_TAGLINE}
+        </p>
+      </footer>
     </div>
   );
 }

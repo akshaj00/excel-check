@@ -134,15 +134,16 @@ function ResultsTable({
   layout?: "grouped" | "repeat";
 }) {
   return (
-    <div className="overflow-x-auto rounded-md border border-border">
-      <Table>
-        <TableHeader>
-          <TableRow className="bg-muted/40">
+    <div className="overflow-x-auto rounded-md border border-border md:overflow-clip">
+      {/* Plain <table> (not ui/Table) so the header can stick to the page while scrolling. */}
+      <table className="w-full caption-bottom text-sm">
+        <TableHeader className="md:sticky md:top-16 z-10 bg-muted shadow-[0_1px_0_var(--color-border)]">
+          <TableRow className="bg-muted hover:bg-muted">
             <TableHead className="w-[200px] font-semibold text-foreground">
               Project
             </TableHead>
             <TableHead className="font-semibold text-foreground">Field</TableHead>
-            <TableHead className="font-semibold text-foreground">Main File</TableHead>
+            <TableHead className="font-semibold text-foreground">SharePoint</TableHead>
             <TableHead className="font-semibold text-foreground">Project Report</TableHead>
             <TableHead className="font-semibold text-foreground">Difference</TableHead>
             <TableHead className="font-semibold text-foreground">Status</TableHead>
@@ -197,7 +198,7 @@ function ResultsTable({
                         rowSpan={entry.rows.length}
                         className="align-top font-medium bg-muted/10 border-r border-border py-3.5 w-[200px]"
                       >
-                        <div className="space-y-1.5 sticky top-2">
+                        <div className="space-y-1.5 md:sticky md:top-[6.75rem]">
                           <div className="font-bold text-foreground text-sm leading-tight">
                             {entry.matchedProjectCode || entry.project}
                           </div>
@@ -236,7 +237,7 @@ function ResultsTable({
             });
           })}
         </TableBody>
-      </Table>
+      </table>
     </div>
   );
 }
@@ -375,7 +376,7 @@ export function ComparisonResults({
                         <span className="font-semibold text-foreground">
                           {p.matchedProjectCode}
                         </span>
-                        <span className="text-[10px] text-muted-foreground">Main</span>
+                        <span className="text-[10px] text-muted-foreground">SharePoint</span>
                         <span className="text-muted-foreground">&#8596;</span>
                         <span className="text-foreground">{p.project}</span>
                         <span className="text-[10px] text-muted-foreground">Report</span>
@@ -550,7 +551,7 @@ export function ComparisonResults({
                           <TableHeader>
                             <TableRow>
                               <TableHead className="py-2 text-xs">Project</TableHead>
-                              <TableHead className="py-2 text-xs">Main Match</TableHead>
+                              <TableHead className="py-2 text-xs">SharePoint Match</TableHead>
                               <TableHead className="py-2 text-xs">Method</TableHead>
                               <TableHead className="py-2 text-xs text-right">Dates</TableHead>
                             </TableRow>

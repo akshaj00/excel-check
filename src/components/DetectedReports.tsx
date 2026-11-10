@@ -34,7 +34,7 @@ export function DetectedReports({
               <TableRow>
                 <TableHead>Date</TableHead>
                 <TableHead>Report Sheet</TableHead>
-                <TableHead className="text-right">Main File Records</TableHead>
+                <TableHead className="text-right">SharePoint Records</TableHead>
               </TableRow>
             </TableHeader>
             <TableBody>

@@ -1,5 +1,5 @@
 import { useEffect, useMemo, useState } from "react";
-import { AlertCircle, Download, Loader2 } from "lucide-react";
+import { AlertCircle, Download, FileDown, Loader2 } from "lucide-react";
 
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
@@ -70,14 +70,21 @@ export function TemplateDownloadCard({
   const filledCount = result?.rows.filter((r) => r.status === "filled").length ?? 0;
 
   return (
-    <Card>
-      <CardHeader>
-        <CardTitle className="text-base">Download Daily Report</CardTitle>
-        <p className="text-sm text-muted-foreground">
-          Exports the download template for the selected date. A project is
-          filled only when every heading matches between the Main Excel and
-          its Daily Report; otherwise its row is left blank.
-        </p>
+    <Card className="border-primary/25 bg-gradient-to-br from-primary/[0.04] to-card">
+      <CardHeader className="pb-4">
+        <div className="flex items-start gap-3">
+          <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-lg bg-primary text-primary-foreground shadow-sm">
+            <FileDown className="h-5 w-5" />
+          </div>
+          <div className="space-y-1">
+            <CardTitle className="text-base">Download Daily Report</CardTitle>
+            <p className="text-sm leading-snug text-muted-foreground">
+              Exports the download template for the selected date. A project is
+              filled only when every heading matches between the SharePoint file
+              and its Daily Report; otherwise its row is left blank.
+            </p>
+          </div>
+        </div>
       </CardHeader>
       <CardContent className="space-y-4">
         <div className="flex flex-col gap-3 sm:flex-row sm:items-end">
@@ -129,7 +136,7 @@ export function TemplateDownloadCard({
               Downloaded <span className="font-medium text-foreground">{result.fileName}</span>{" "}
               — {filledCount} of {result.rows.length} projects filled.
             </p>
-            <ul className="divide-y divide-border rounded-md border border-border text-sm">
+            <ul className="grid divide-y divide-border overflow-hidden rounded-lg border border-border bg-card text-sm">
               {result.rows.map((row) => (
                 <li
                   key={row.project}

@@ -167,14 +167,14 @@ export function resolveProjectMatchDetailed(
     // If there's an exact tie at the top, check if both are distinct
     if (bestScore === secondBestScore && bestScore < 100) {
       throw new Error(
-        `Ambiguous project match for '${targetProject}' in Main Excel.`,
+        `Ambiguous project match for '${targetProject}' in the SharePoint file.`,
       );
     }
     return { matched: bestCand, method: bestMethod, score: bestScore };
   }
 
   throw new Error(
-    `The project '${targetProject}' could not be matched to any project in the Main Excel file.`,
+    `The project '${targetProject}' could not be matched to any project in the SharePoint file.`,
   );
 }
 

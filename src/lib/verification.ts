@@ -77,7 +77,7 @@ export function filterByProject(
   const projectColumn = findProjectColumn(headers);
   if (!projectColumn)
     throw new VerificationError(
-      "Could not find a project column in Main Excel.",
+      "Could not find a project column in the SharePoint file.",
     );
 
   const candidates = Array.from(
@@ -116,7 +116,7 @@ export function groupByDate(rows: Row[]): Map<string, Row[]> {
   if (rows.length === 0) return grouped;
   const headers = Object.keys(rows[0] ?? {});
   const dateColumn = findDateColumn(headers);
-  if (!dateColumn) throw new VerificationError("Required column 'Receipt Date (RDS)' not found in Main Excel.");
+  if (!dateColumn) throw new VerificationError("Required column 'Receipt Date (RDS)' not found in the SharePoint file.");
 
   for (const row of rows) {
     const date = normalizeDate(row[dateColumn]);
@@ -175,7 +175,7 @@ export async function runVerification(
     mainRows = parseMainWorkbook(mainWorkbook);
   } catch {
     throw new VerificationError(
-      "Unable to read the Main Excel file. Please check the file and try again.",
+      "Unable to read the SharePoint file. Please check the file and try again.",
     );
   }
 
@@ -239,7 +239,7 @@ export async function runVerification(
             },
             error:
               err.message ||
-              `The project '${usedReportProject}' could not be matched in the Main Excel file.`,
+              `The project '${usedReportProject}' could not be matched in the SharePoint file.`,
           });
           continue;
         }
@@ -259,7 +259,7 @@ export async function runVerification(
             summary: { total: 0, matched: 0, changed: 0, missing: 0 },
             dates: [],
           },
-          error: `No matching records found in Main Excel for '${filterResult.matchedCode}'.`,
+          error: `No matching records found in the SharePoint file for '${filterResult.matchedCode}'.`,
         });
         continue;
       }
