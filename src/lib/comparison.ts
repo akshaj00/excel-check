@@ -99,11 +99,22 @@ export function analyzeProjectData(
         }
       }
 
+      // A day with no SharePoint records is valid when the report also shows
+      // no activity (every check is 0 = 0), so only flag it otherwise.
+      const isZeroActivityDay =
+        results.length > 0 &&
+        results.every(
+          (r) =>
+            r.status === "matched" &&
+            Number(r.mainValue) === 0 &&
+            Number(r.reportValue) === 0,
+        );
+
       return {
         date: report.date,
         sheet: report.sheet,
         mainRecordCount: mainRows.length,
-        ...(!hasRecords
+        ...(!hasRecords && !isZeroActivityDay
           ? {
               error: `${report.date} was not found for this project in the SharePoint master file.`,
             }
