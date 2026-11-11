@@ -280,7 +280,7 @@ export function FileUploadCard({
           >
             <UploadCloud className="h-9 w-9 text-primary/70" />
             <p className="text-sm text-muted-foreground">
-              Drag and drop the SharePoint export here, or
+              Drag and drop the SharePoint master file here, or
             </p>
             <Button
               type="button"

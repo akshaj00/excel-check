@@ -26,7 +26,7 @@ import {
 } from "@/lib/verification";
 
 const APP_NAME = "DocTally";
-const APP_TAGLINE = "SharePoint vs. daily report reconciliation";
+const APP_TAGLINE = "Document Control Transmittal Integrity & Reconciliation Engine";
 
 export const Route = createFileRoute("/")({
   head: () => ({
@@ -35,13 +35,13 @@ export const Route = createFileRoute("/")({
       {
         name: "description",
         content:
-          "Upload the SharePoint file and project daily reports to reconcile document control figures directly in your browser.",
+          "Upload the SharePoint master file and project daily reports to reconcile document control figures directly in your browser.",
       },
       { property: "og:title", content: APP_NAME },
       {
         property: "og:description",
         content:
-          "Reconcile document controller daily reports against the SharePoint register — entirely in the browser.",
+          "Reconcile document controller daily reports against the SharePoint master file — entirely in the browser.",
       },
       { property: "og:type", content: "website" },
       { name: "twitter:card", content: "summary" },
@@ -66,12 +66,12 @@ function Index() {
   const handleVerify = async () => {
     if (!mainFile && projectFiles.length === 0) {
       setError(
-        "Please upload the SharePoint file and at least one Project Report file.",
+        "Please upload the SharePoint master file and at least one Project Report file.",
       );
       return;
     }
     if (!mainFile) {
-      setError("Please upload the SharePoint file.");
+      setError("Please upload the SharePoint master file.");
       return;
     }
     if (projectFiles.length === 0) {
@@ -106,7 +106,7 @@ function Index() {
 
   const steps: StatusStep[] = [
     {
-      label: "SharePoint file uploaded",
+      label: "SharePoint master file uploaded",
       detail: mainFile?.name,
       state: mainFile ? "done" : "pending",
     },
@@ -134,7 +134,7 @@ function Index() {
       state: outcome ? "done" : isVerifying ? "active" : "pending",
     },
     {
-      label: "SharePoint records filtered",
+      label: "SharePoint master records filtered",
       detail: outcome
         ? `${outcome.projectRowCount} of ${outcome.mainRowCount} records`
         : undefined,
@@ -156,11 +156,11 @@ function Index() {
             <div className="flex h-9 w-9 items-center justify-center rounded-lg bg-primary text-primary-foreground shadow-sm">
               <ScanSearch className="h-5 w-5" />
             </div>
-            <div className="leading-tight">
+            <div className="min-w-0 leading-tight">
               <p className="text-base font-bold tracking-tight text-foreground">
                 {APP_NAME}
               </p>
-              <p className="text-xs text-muted-foreground">{APP_TAGLINE}</p>
+              <p className="truncate text-xs text-muted-foreground">{APP_TAGLINE}</p>
             </div>
           </div>
           {outcome && !isVerifying && (
@@ -178,23 +178,12 @@ function Index() {
       </header>
 
       <main className="mx-auto max-w-6xl space-y-6 px-4 py-8 sm:px-6 sm:py-10">
-        <section className="space-y-2">
-          <h1 className="text-2xl font-bold tracking-tight text-foreground sm:text-3xl">
-            Reconcile daily reports in minutes
-          </h1>
-          <p className="max-w-2xl text-sm text-muted-foreground sm:text-base">
-            Upload the SharePoint file and your project daily reports. {APP_NAME}{" "}
-            checks every transmittal, drawing and close-out figure, then lets you
-            export the verified daily summary.
-          </p>
-        </section>
-
         <div className="grid gap-4 md:grid-cols-2">
           <FileUploadCard
             step={1}
             icon={Cloud}
-            title="SharePoint File"
-            description="The SharePoint export containing data for all projects."
+            title="SharePoint Master File"
+            description="The SharePoint master file containing data for all projects."
             file={mainFile}
             onFileChange={(file) => {
               setMainFile(file);

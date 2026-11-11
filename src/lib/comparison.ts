@@ -105,7 +105,7 @@ export function analyzeProjectData(
         mainRecordCount: mainRows.length,
         ...(!hasRecords
           ? {
-              error: `${report.date} was not found for this project in the SharePoint file.`,
+              error: `${report.date} was not found for this project in the SharePoint master file.`,
             }
           : {}),
         results,

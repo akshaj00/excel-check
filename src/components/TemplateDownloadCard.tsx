@@ -80,7 +80,7 @@ export function TemplateDownloadCard({
             <CardTitle className="text-base">Download Daily Report</CardTitle>
             <p className="text-sm leading-snug text-muted-foreground">
               Exports the download template for the selected date. A project is
-              filled only when every heading matches between the SharePoint file
+              filled only when every heading matches between the SharePoint master file
               and its Daily Report; otherwise its row is left blank.
             </p>
           </div>

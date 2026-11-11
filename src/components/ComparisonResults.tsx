@@ -143,7 +143,7 @@ function ResultsTable({
               Project
             </TableHead>
             <TableHead className="font-semibold text-foreground">Field</TableHead>
-            <TableHead className="font-semibold text-foreground">SharePoint</TableHead>
+            <TableHead className="font-semibold text-foreground">SharePoint Master File</TableHead>
             <TableHead className="font-semibold text-foreground">Project Report</TableHead>
             <TableHead className="font-semibold text-foreground">Difference</TableHead>
             <TableHead className="font-semibold text-foreground">Status</TableHead>
@@ -376,7 +376,7 @@ export function ComparisonResults({
                         <span className="font-semibold text-foreground">
                           {p.matchedProjectCode}
                         </span>
-                        <span className="text-[10px] text-muted-foreground">SharePoint</span>
+                        <span className="text-[10px] text-muted-foreground">SharePoint Master</span>
                         <span className="text-muted-foreground">&#8596;</span>
                         <span className="text-foreground">{p.project}</span>
                         <span className="text-[10px] text-muted-foreground">Report</span>
@@ -551,7 +551,7 @@ export function ComparisonResults({
                           <TableHeader>
                             <TableRow>
                               <TableHead className="py-2 text-xs">Project</TableHead>
-                              <TableHead className="py-2 text-xs">SharePoint Match</TableHead>
+                              <TableHead className="py-2 text-xs">SharePoint Master Match</TableHead>
                               <TableHead className="py-2 text-xs">Method</TableHead>
                               <TableHead className="py-2 text-xs text-right">Dates</TableHead>
                             </TableRow>
